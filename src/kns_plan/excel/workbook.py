@@ -67,6 +67,7 @@ def build(plan: Plan) -> tuple[Workbook, list[Expected]]:
     order = front + [n for n in outputs if n not in front] + inputs
     wb._sheets = [wb[name] for name in order]
     wb.active = 0
+    wb.calculation.fullCalcOnLoad = True  # the file carries formulas only; Excel computes them on opening
     return wb, expected
 
 
@@ -94,10 +95,12 @@ def _audit(result: GenerateResult) -> None:
         if not isinstance(got, (int, float)) or not math.isclose(got, e.value, rel_tol=1e-9, abs_tol=1e-6):
             result.issues.append(Issue("error", f"{e.sheet}!{e.coord}",
                                        f"{e.label}: workbook gives {got!r}, engine gives {e.value!r}"))
+    # The download stays the file this app wrote (LibreOffice's re-saved copy is only used for the
+    # check); Excel recalculates it on opening.
     if recalc.recalculated_file:
-        # keep the LibreOffice copy: same formulas, plus cached values for previews
-        shutil.copyfile(recalc.recalculated_file, result.path)
-    else:
-        result.issues.append(Issue("warning", "audit",
-                                   "LibreOffice not found: checked with the Python fallback; the file has no "
-                                   "cached values until it is opened in Excel"))
+        shutil.rmtree(recalc.recalculated_file.parent, ignore_errors=True)
+    if recalc.backend == "formulas":
+        result.issues.append(Issue("warning", "audit", "LibreOffice is not installed here; checked with the "
+                                                       "Python fallback instead"))
+    elif recalc.backend != "libreoffice":
+        result.issues.append(Issue("warning", "audit", f"checked with the Python fallback: {recalc.backend}"))

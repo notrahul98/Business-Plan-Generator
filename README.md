@@ -40,6 +40,26 @@ The app computes every figure in Python and writes the workbook as formulas. Bef
 offered, the workbook is recalculated (LibreOffice on the server) and each key figure is compared
 with the Python result. Any `#REF!`/`#DIV/0!` or mismatch blocks the download.
 
+## Try it on GitHub Codespaces
+
+GitHub Pages cannot run this app (it only shows static pages). Codespaces runs the real app, with
+LibreOffice, on a private cloud machine tied to your GitHub account.
+
+1. Optional, before the first start: GitHub › Settings › Codespaces › Secrets › **New secret**
+   `KNS_APP_PASSWORD`, with access to this repository. Without it a password is generated.
+2. In this repository: **Code › Codespaces › Create codespace on main**. The first start takes
+   a few minutes (it installs LibreOffice and the app).
+3. The app opens in a new browser tab. If it does not, open the **Ports** tab and click the globe
+   next to port 8400. Sign in with your secret, or the password in `data/FIRST-PASSWORD.txt`.
+4. To start from the company's real default rates: on the plans page, **Import a plan file** with
+   the private rates file (kept outside this repository), open its Cost stack step and click
+   **Use this stack as the starting point for new plans**.
+
+Port 8400 is private by default: only you, signed in to GitHub, can open it. Plans are stored in
+`data/` inside the codespace and are never committed. A stopped codespace keeps them; a deleted
+one loses them, so download plan files (Review step) you want to keep. To run every check with
+LibreOffice: `python -m pytest` in the codespace terminal.
+
 ## Development
 
 ```
@@ -51,15 +71,16 @@ python -m venv .venv
 Command line:
 
 ```
-kns-plan new --brand "Brand" --fx 18200 -o plan.json     # blank plan with the KNS default stack
+kns-plan new --brand "Brand" --fx 18200 -o plan.json     # blank plan with the default stack
 kns-plan generate plan.json -o out/plan.xlsx               # workbook, recalculated and checked
 kns-plan import out/plan.xlsx -o plan.json                 # read the _Inputs sheets back
 kns-plan serve --data data-dev                             # web app on http://127.0.0.1:8400
 ```
 
 For local testing, `dev/dev_password.txt` holds the password for the `data-dev` folder, and
-`tests/private/` can hold checks against real plans; all three are ignored by git. Without LibreOffice, checks run with the `formulas` package instead and the
-downloaded file has no cached values until opened in Excel.
+`tests/private/` can hold checks against real plans; all three are ignored by git. Without
+LibreOffice, the check before download runs with the `formulas` package instead. Downloaded
+workbooks carry formulas only; Excel calculates them when the file is opened.
 
 Deployment on the office server: see [docs/DEPLOY.md](docs/DEPLOY.md).
 

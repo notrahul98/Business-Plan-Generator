@@ -15,3 +15,6 @@ tests/private/
 *.xlsm
 *.pdf
 *.bundle
+!.devcontainer/devcontainer.json
+# the app's data folder (plans, uploads, password hash) when run from this folder or a codespace
+data/

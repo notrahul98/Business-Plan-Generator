@@ -37,6 +37,13 @@
   </form>
   <p class="hint">The plan starts with the company default cost stack. You can change every rate.</p>
   <p><a href="/template/products.xlsx">Download the KNS product template</a></p>
+  <h2>Import a plan file</h2>
+  <form method="post" action="/plans/import" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="file" name="file" accept=".json" required>
+    <button>Import</button>
+  </form>
+  <p class="hint">A plan's data file, downloaded from the Review step of this app (here or on another server).</p>
 </section>
 </div>
 {% endblock %}

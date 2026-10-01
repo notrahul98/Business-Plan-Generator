@@ -24,10 +24,18 @@
     {{ grid(grids['lines_' ~ k]) }}
     <p class="hint">Line IDs (used as a base by later lines):
       {% for line in st.lines %}<code>{{ line.id }}</code>{{ ', ' if not loop.last }}{% endfor %}</p>
+    <button form="default-{{ k }}" class="link" title="Saves this stack, as last saved, on the server only">Use this stack as the starting point for new plans</button>
   </section>
   {% endfor %}
   <button name="add_stack" value="1">+ Add another cost stack</button>
   <span class="hint">Use a second stack for products with different duties or freight (e.g. food vs cosmetics).</span>
   {{ save('products') }}
 </form>
+{% for st in plan.stacks %}
+<form id="default-{{ loop.index0 }}" method="post" action="/plans/{{ row.id }}/pricing/make-default/{{ loop.index0 }}"
+      onsubmit="return confirm('New plans will start from this cost stack, as last saved. Continue?')">
+  <input type="hidden" name="csrf" value="{{ csrf }}"></form>
+{% endfor %}
+<p class="hint">{% if has_default %}New plans start from the company default saved on this server.{% else %}No company
+  default is set up on this server yet, so new plans start from example rates.{% endif %}</p>
 {% endblock %}

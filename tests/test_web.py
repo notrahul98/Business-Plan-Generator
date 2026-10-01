@@ -166,3 +166,32 @@ def test_invalid_input_is_not_saved_and_is_shown_back(client):
     r = client.post(f"/plans/{pid}/products", data=grid_form(token, "skus", [
         {"name": "Thing", "fob": "-3", "stack": "default"}]))
     assert r.status_code == 422 and "Not saved" in r.text and 'value="-3"' in r.text
+
+
+def test_default_stack_button_and_plan_import(client):
+    token = login(client)
+    r = client.post("/plans", data={"csrf": token, "brand": "B", "fx_rate": "15000"})
+    pid = int(re.search(r"/plans/(\d+)/setup", str(r.url)).group(1))
+    assert "example rates" in client.get(f"/plans/{pid}/pricing").text
+    # change the distributor margin, save, make it the company default
+    page = client.get(f"/plans/{pid}/pricing").text
+    data = {"csrf": token, "stack-0-name": "Company default", "stack-0-cogs": "landed"}
+    for name, value in re.findall(r'name="(lines_0-\d+-[a-z_]+)" value="([^"]*)"', page):
+        data[name] = value
+    for name in re.findall(r'<select name="(lines_0-\d+-[a-z_]+)"', page):
+        m = re.search(rf'<select name="{name}">.*?<option value="([^"]*)" selected', page, re.S)
+        data[name] = m.group(1) if m else ""
+    row = next(n.split("-")[1] for n, v in data.items() if n.endswith("-label") and v == "Distributor margin")
+    data[f"lines_0-{row}-rate"] = "33"
+    assert "Saved" in client.post(f"/plans/{pid}/pricing", data=data).text
+    r = client.post(f"/plans/{pid}/pricing/make-default/0", data={"csrf": token})
+    assert "starting cost stack for new plans" in r.text
+    r = client.post("/plans", data={"csrf": token, "brand": "C", "fx_rate": "15000"})
+    assert 'value="33"' in client.get(str(r.url).replace("/setup", "/pricing")).text
+
+    # a downloaded plan file comes back as a new plan
+    exported = client.get(f"/plans/{pid}/export.json").content
+    r = client.post("/plans/import", data={"csrf": token}, files={"file": ("plan.json", exported)})
+    assert "Imported plan.json" in r.text and "B business plan" in r.text
+    r = client.post("/plans/import", data={"csrf": token}, files={"file": ("bad.json", b"{\"x\": 1}")})
+    assert "not a plan file" in r.text

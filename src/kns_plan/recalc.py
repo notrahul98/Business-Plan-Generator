@@ -42,9 +42,19 @@ class Recalculated:
 
 
 def recalculate(path: Path) -> Recalculated:
+    """LibreOffice when installed; the Python `formulas` package if it is missing or fails."""
     soffice = find_soffice()
     if soffice:
-        return _libreoffice(Path(path), soffice)
+        try:
+            result = _libreoffice(Path(path), soffice)
+            if any(v is not None for v in result.values.values()):
+                return result
+            note = "LibreOffice returned no values"
+        except (subprocess.SubprocessError, OSError, KeyError) as e:
+            note = f"LibreOffice failed ({type(e).__name__})"
+        fallback = _formulas(Path(path))
+        fallback.backend = f"formulas ({note})"
+        return fallback
     return _formulas(Path(path))
 
 
@@ -54,15 +64,31 @@ def _formula_cells(path: Path) -> list[tuple[str, str]]:
             if isinstance(c.value, str) and c.value.startswith("=")]
 
 
+# LibreOffice normally trusts the values cached in an .xlsx; ours has none, so make it recalculate
+# everything on load (0 = always) via the throwaway profile used for each run.
+_RECALC_ALWAYS = """<?xml version="1.0" encoding="UTF-8"?>
+<oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<item oor:path="/org.openoffice.Office.Calc/Formula/Load"><prop oor:name="OOXMLRecalcMode" oor:op="fuse"><value>0</value></prop></item>
+<item oor:path="/org.openoffice.Office.Calc/Formula/Load"><prop oor:name="ODFRecalcMode" oor:op="fuse"><value>0</value></prop></item>
+</oor:items>
+"""
+
+
 def _libreoffice(path: Path, soffice: str) -> Recalculated:
     out_dir = Path(tempfile.mkdtemp(prefix="kns_recalc_"))
-    profile = Path(tempfile.mkdtemp(prefix="kns_lo_profile_")).as_uri()
-    subprocess.run([soffice, f"-env:UserInstallation={profile}", "--headless", "--norestore",
-                    "--calc", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", str(out_dir),
-                    str(path)], check=True, capture_output=True, timeout=180)
-    result = out_dir / path.name
-    wb = load_workbook(result, data_only=True)
-    values = {(s, c): wb[s][c].value for s, c in _formula_cells(path)}
+    profile = Path(tempfile.mkdtemp(prefix="kns_lo_profile_"))
+    (profile / "user").mkdir()
+    (profile / "user" / "registrymodifications.xcu").write_text(_RECALC_ALWAYS, encoding="utf-8")
+    try:
+        subprocess.run([soffice, f"-env:UserInstallation={profile.as_uri()}", "--headless", "--norestore",
+                        "--calc", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", str(out_dir),
+                        str(path)], check=True, capture_output=True, timeout=180)
+        result = out_dir / path.name
+        wb = load_workbook(result, data_only=True)
+        values = {(s, c): wb[s][c].value for s, c in _formula_cells(path)}
+    finally:
+        shutil.rmtree(profile, ignore_errors=True)
     return Recalculated("libreoffice", values, result)
 
 

@@ -26,7 +26,7 @@ from .. import intake, model
 from ..edit import add_driver, ensure_id, new_plan, prune
 from ..excel import PlanInvalid, generate, read_inputs
 from ..excel.inputs import month_labels
-from ..presets import DRIVER_PRESETS, default_stack
+from ..presets import DRIVER_PRESETS, default_stack, default_stack_path, save_default_stack
 from ..schema import LineType, Plan, slugify
 from ..stack import evaluate, linear_terms
 from ..validate import check_plan
@@ -156,6 +156,33 @@ def create_app(data_dir: Path | str | None = None, password_hash: str | None = N
         pid = store.create(name, plan, user_of(request))
         return RedirectResponse(f"/plans/{pid}/setup", status_code=303)
 
+    @app.post("/plans/import")
+    async def import_plan(request: Request, file: UploadFile = File(...)):
+        """A plan file downloaded from this app (Review step › Download plan data)."""
+        await form_of(request)
+        raw = await file.read()
+        try:
+            doc = json.loads(raw.decode("utf-8-sig"))
+            plan = Plan.model_validate(doc.get("plan", doc) if isinstance(doc, dict) else doc)
+        except (ValueError, ValidationError, AttributeError) as e:
+            flash(request, f"{file.filename} is not a plan file from this app: {_errors(e)}", "error")
+            return RedirectResponse("/", status_code=303)
+        name = (doc.get("name") if isinstance(doc, dict) and doc.get("name") else None) or \
+            f"{plan.settings.brand} (imported)"
+        pid = store.create(name, plan, user_of(request))
+        flash(request, f"Imported {file.filename} as '{name}'.")
+        return RedirectResponse(f"/plans/{pid}/setup", status_code=303)
+
+    @app.post("/plans/{plan_id}/pricing/make-default/{k}")
+    async def make_default_stack(request: Request, plan_id: int, k: int):
+        await form_of(request)
+        _, plan = load(plan_id)
+        if not 0 <= k < len(plan.stacks):
+            raise HTTPException(404)
+        save_default_stack(plan.stacks[k], data)
+        flash(request, f"'{plan.stacks[k].name}' (as last saved) is now the starting cost stack for new plans.")
+        return RedirectResponse(f"/plans/{plan_id}/pricing", status_code=303)
+
     @app.post("/plans/{plan_id}/copy")
     async def copy_plan(request: Request, plan_id: int):
         await form_of(request)
@@ -267,7 +294,9 @@ def create_app(data_dir: Path | str | None = None, password_hash: str | None = N
                                "retail_100": res.shelf * plan.settings.fx_rate}
             except Exception:  # noqa: BLE001 - an invalid stack shows no preview; issues list explains why
                 previews[k] = None
-        return {"grids": grids, "previews": previews, "types": types}
+        path = default_stack_path(data)
+        return {"grids": grids, "previews": previews, "types": types,
+                "has_default": bool(path and path.exists())}
 
     def apply_pricing(data, form, submitted, plan):
         stacks = []
