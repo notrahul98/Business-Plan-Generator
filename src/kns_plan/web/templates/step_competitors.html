@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_grid.html" import grid, save %}
+{% block main %}
+<h1>4. Competitors <small>optional</small></h1>
+<section class="card">
+  <p class="lead">Benchmark products for each of ours. Prices are shelf prices in IDR incl. VAT. When both sizes use
+    the same unit, the price is scaled to our product's size.</p>
+  <form method="post" action="/plans/{{ row.id }}/upload/competitors" enctype="multipart/form-data" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="file" name="file" accept=".xlsx,.xlsm,.csv" required>
+    <button>Upload competitor list</button>
+    <span class="hint">Needs a column naming our product (name or ID) for each row.</span>
+  </form>
+</section>
+{% if not plan.skus %}<p class="flash warn">Add products first.</p>{% endif %}
+<form method="post" data-dirty>
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ grid(grids['competitors']) }}
+  {{ save('channels') }}
+</form>
+{% endblock %}

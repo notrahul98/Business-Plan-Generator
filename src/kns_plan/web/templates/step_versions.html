@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block main %}
+<h1>Version history</h1>
+<p class="lead">Every save is kept. Restoring copies an old version to the top; nothing is deleted.</p>
+<table class="list">
+  <thead><tr><th>Version</th><th>Saved (UTC)</th><th>By</th><th>What</th><th></th></tr></thead>
+  <tbody>
+  {% for v in versions %}
+  <tr><td>v{{ v.version }}</td><td>{{ v.saved_at[:16].replace('T', ' ') }}</td><td>{{ v.saved_by }}</td><td>{{ v.note }}</td>
+    <td>{% if not loop.first %}<form method="post" action="/plans/{{ row.id }}/restore/{{ v.version }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="link">Restore</button></form>{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% macro cell(col, g, i, r) -%}
+  {%- set name = g.name ~ '-' ~ i ~ '-' ~ col.name -%}
+  {%- set v = display(col, r.get(col.name)) if r else '' -%}
+  {%- if col.kind == 'hidden' -%}
+    <input type="hidden" name="{{ name }}" value="{{ v }}">
+  {%- elif col.kind == 'readonly' -%}
+    <td class="ro {{ 'num' if col.align == 'right' }}">{{ r.get(col.name) if r and r.get(col.name) is not none else '' }}</td>
+  {%- elif col.kind == 'select' -%}
+    <td><select name="{{ name }}">
+      {%- for val, label in col.options %}<option value="{{ val }}" {{ 'selected' if (r and (r.get(col.name) or '') | string == val | string) }}>{{ label }}</option>{% endfor -%}
+    </select></td>
+  {%- elif col.kind == 'check' -%}
+    <td class="c"><input type="hidden" name="{{ name }}" value=""><input type="checkbox" name="{{ name }}" value="1" {{ 'checked' if v }}></td>
+  {%- else -%}
+    <td><input name="{{ name }}" value="{{ v }}" {% if col.kind in ('number','idr','percent') %}inputmode="decimal" class="num"{% endif %} {% if col.hint %}title="{{ col.hint }}"{% endif %}></td>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro grid(g) %}
+<div class="grid-wrap">
+<table class="grid" data-grid="{{ g.name }}" data-next="{{ g.rows | length }}">
+  <thead><tr>
+    {% for col in g.columns if col.kind != 'hidden' %}<th style="min-width:{{ col.width }}px" {% if col.hint %}title="{{ col.hint }}"{% endif %}>{{ col.label }}</th>{% endfor %}
+    {% if g.allow_delete %}<th class="del"></th>{% endif %}
+  </tr></thead>
+  <tbody>
+  {% for r in g.rows %}{% set i = loop.index0 %}
+    <tr>{% for col in g.columns %}{{ cell(col, g, i, r) }}{% endfor %}
+    {% if g.allow_delete %}<td class="del"><button type="button" class="x" title="Remove row" data-remove>×</button></td>{% endif %}</tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if g.allow_add %}
+<template data-row-for="{{ g.name }}"><tr>{% for col in g.columns %}{{ cell(col, g, '__i__', none) }}{% endfor %}
+  {% if g.allow_delete %}<td class="del"><button type="button" class="x" title="Remove row" data-remove>×</button></td>{% endif %}</tr></template>
+<button type="button" class="add" data-add="{{ g.name }}">+ {{ g.add_label }}</button>
+<span class="hint">Tip: copy cells in Excel and paste into any box to fill several rows at once.</span>
+{% endif %}
+</div>
+{% endmacro %}
+
+{% macro save(next=none) %}
+<div class="actions">
+  <button class="primary" name="next" value="">Save</button>
+  {% if next %}<button name="next" value="{{ next }}">Save and continue →</button>{% endif %}
+</div>
+{% endmacro %}

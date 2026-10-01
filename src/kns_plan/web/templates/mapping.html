@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block main %}
+<h1>Import {{ kind_label | lower }}: match the columns</h1>
+<p>File: <b>{{ filename }}</b>{% if sheet %}, sheet <b>{{ sheet }}</b>{% endif %} · {{ table.rows | length }} data rows.
+  Columns you leave unmatched are {{ 'kept as product attributes' if kind == 'products' else 'ignored' }}.</p>
+{% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+<form method="post" action="/plans/{{ row.id }}/import/{{ kind }}/{{ token }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {% if sheets | length > 1 %}
+  <label class="inline">Sheet <select name="sheet">{% for s in sheets %}<option {{ 'selected' if s == sheet }}>{{ s }}</option>{% endfor %}</select>
+    <button name="change_sheet" value="1">Use this sheet</button></label>
+  {% endif %}
+  <table class="list mapping">
+    <thead><tr><th>Field</th><th>Column in your file</th></tr></thead>
+    <tbody>
+    {% for field, header in mapping.items() %}
+    <tr><td>{{ labels[field] }}{% if field in required %} <b class="req">required</b>{% endif %}</td>
+      <td><select name="map-{{ field }}"><option value="">— not in this file —</option>
+        {% for h in table.headers %}<option {{ 'selected' if h == header }}>{{ h }}</option>{% endfor %}</select></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if kind == 'products' %}
+  <p class="hint">Sizes like “15ml” or “31 x 4 g” are split into size and unit. Products whose name already
+    exists in the plan are updated rather than added.</p>
+  {% elif kind == 'stores' %}
+  <p class="hint">Each row is one store. The opening month can be a date, “2027-03”, “Mar 2027” or a plan month
+    number (1 = {{ months[0] }}). Channel names must match the plan's channels. The count of open stores per month
+    goes into the first factor of that channel's first driver.</p>
+  {% endif %}
+  {% if kind != 'stores' %}
+  <fieldset class="inline"><legend>Existing {{ kind_label | lower }}</legend>
+    <label><input type="radio" name="mode" value="append" checked> Add to them</label>
+    <label><input type="radio" name="mode" value="replace"> Replace them</label>
+  </fieldset>
+  {% endif %}
+  <div class="actions"><button class="primary">Import</button> <a href="/plans/{{ row.id }}/{{ step }}">Cancel</a></div>
+</form>
+<h2>Preview</h2>
+<div class="grid-wrap"><table class="list small">
+  <thead><tr>{% for h in table.headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for r in preview %}<tr>{% for h in table.headers %}<td>{{ r[h] if r[h] is not none else '' }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

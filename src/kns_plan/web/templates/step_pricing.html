@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_grid.html" import grid, save %}
+{% block main %}
+<h1>2. Cost stack</h1>
+<p class="lead">How the brand price becomes a shelf price. Lines run top to bottom. A <b>% of a base</b> line adds a
+  share of the brand price (<code>fob</code>), of the running total (<code>running</code>) or of an earlier line (its ID).
+  A <b>% of resulting price</b> line is a margin on the next subtotal (wholesale = landed ÷ (1 − margins)).
+  A <b>subtotal</b> closes a step; the last line must be the shelf price incl. VAT.</p>
+<form method="post" data-dirty>
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {% for st in plan.stacks %}{% set k = loop.index0 %}
+  <section class="card">
+    <div class="stack-head">
+      <label class="inline">Name <input name="stack-{{ k }}-name" value="{{ st.name }}"></label>
+      <label class="inline">Cost of goods line
+        <select name="stack-{{ k }}-cogs"><option value="">— none —</option>
+          {% for line in st.lines if line.type.value == 'subtotal' %}<option value="{{ line.id }}" {{ 'selected' if st.cogs_line == line.id }}>{{ line.label }}</option>{% endfor %}</select></label>
+      {% if previews[k] %}
+      <span class="kpi">Coefficient <b>{{ '%.4f' % previews[k].coefficient }}</b></span>
+      <span class="kpi">Brand price 100 → <b>{{ previews[k].retail_100 | idr }}</b> IDR</span>
+      {% endif %}
+      {% if plan.stacks | length > 1 %}<label class="inline danger"><input type="checkbox" name="stack-{{ k }}-delete" value="1"> delete this stack</label>{% endif %}
+    </div>
+    {{ grid(grids['lines_' ~ k]) }}
+    <p class="hint">Line IDs (used as a base by later lines):
+      {% for line in st.lines %}<code>{{ line.id }}</code>{{ ', ' if not loop.last }}{% endfor %}</p>
+  </section>
+  {% endfor %}
+  <button name="add_stack" value="1">+ Add another cost stack</button>
+  <span class="hint">Use a second stack for products with different duties or freight (e.g. food vs cosmetics).</span>
+  {{ save('products') }}
+</form>
+{% endblock %}

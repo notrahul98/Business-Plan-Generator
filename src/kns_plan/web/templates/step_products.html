@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_grid.html" import grid, save %}
+{% block main %}
+<h1>3. Products</h1>
+<div class="cols">
+  <section class="card grow">
+    <p class="lead">Upload the brand's product list, or type and paste below. Grey columns are calculated after you save.</p>
+    <form method="post" action="/plans/{{ row.id }}/upload/products" enctype="multipart/form-data" class="inline">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="file" name="file" accept=".xlsx,.xlsm,.csv" required>
+      <button>Upload product list</button>
+      <a href="/template/products.xlsx">KNS product template</a>
+    </form>
+  </section>
+</div>
+<form method="post" data-dirty>
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {{ grid(grids['skus']) }}
+  <p class="hint">“Price vs competitor” sets the proposed retail from a competitor (size-matched) less “% below”;
+    a typed target retail takes priority. Add competitors on the next step first.</p>
+  {{ save('competitors') }}
+</form>
+{% endblock %}

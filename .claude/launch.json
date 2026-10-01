@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "kns-plan",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "kns_plan.cli", "serve", "--data", "data-dev", "--port", "8400"],
+      "port": 8400
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block main %}
+<h1>Business plans</h1>
+<div class="cols">
+<section class="card grow">
+  {% if plans %}
+  <table class="list">
+    <thead><tr><th>Plan</th><th>Brand</th><th>Version</th><th>Last saved (UTC)</th><th></th></tr></thead>
+    <tbody>
+    {% for p in plans %}
+    <tr>
+      <td><a href="/plans/{{ p.id }}/setup">{{ p.name }}</a>{% if p.archived %} <small>(archived)</small>{% endif %}</td>
+      <td>{{ p.brand }}</td><td>v{{ p.version }}</td><td>{{ p.updated_at[:16].replace('T', ' ') }}</td>
+      <td class="row-actions">
+        <form method="post" action="/plans/{{ p.id }}/copy"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="link">Copy</button></form>
+        <form method="post" action="/plans/{{ p.id }}/archive"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="archived" value="{{ '0' if p.archived else '1' }}"><button class="link">{{ 'Restore' if p.archived else 'Archive' }}</button></form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p>No plans yet. Start one on the right.</p>{% endif %}
+  <p><a href="/?archived={{ 0 if archived else 1 }}">{{ 'Hide' if archived else 'Show' }} archived plans</a></p>
+</section>
+<section class="card side">
+  <h2>New plan</h2>
+  <form method="post" action="/plans">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Brand<input name="brand" required></label>
+    <label>Plan name <small>(optional)</small><input name="name" placeholder="e.g. Brand A 2027 proposal"></label>
+    <div class="two">
+      <label>Brand currency<input name="currency" value="USD" maxlength="3"></label>
+      <label>IDR per 1 unit<input name="fx_rate" inputmode="decimal" required placeholder="18200"></label>
+    </div>
+    <button class="primary">Create plan</button>
+  </form>
+  <p class="hint">The plan starts with the company default cost stack. You can change every rate.</p>
+  <p><a href="/template/products.xlsx">Download the KNS product template</a></p>
+</section>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_grid.html" import grid, save %}
+{% block main %}
+<h1>5. Channels</h1>
+<form method="post" data-dirty>
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <section class="card">
+    <h2>Channels and margins</h2>
+    <p class="lead">Margin = the channel's share of retail sales incl. VAT. For marketplaces, list the fees below
+      instead; fees marked “plus VAT” are charged with VAT on top. Treatment channels take their product mix from a
+      package (set up on the Extras step).</p>
+    {{ grid(grids['channels']) }}
+  </section>
+  {% if plan.channels %}
+  <section class="card">
+    <h2>Channel fees <small>optional</small></h2>
+    {{ grid(grids['fees']) }}
+  </section>
+  <section class="card">
+    <h2>Which products go where</h2>
+    <p class="lead">Weight = units of the product per unit of the channel's volume (usually 1). Leave blank if the
+      channel does not carry it. For a mix that should add up to 1 (e.g. 10 flavours from one bar estimate), use shares.</p>
+    {{ grid(grids['listings']) }}
+    <p class="inline">List every product at weight 1 in:
+      {% for ch in plan.channels if not ch.package %}<button name="list_all" value="{{ ch.id }}">{{ ch.name }}</button>{% endfor %}</p>
+  </section>
+  {% endif %}
+  {{ save('volume') }}
+</form>
+{% endblock %}

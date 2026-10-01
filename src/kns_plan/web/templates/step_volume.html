@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "_grid.html" import grid, save %}
+{% block main %}
+<h1>6. Volume</h1>
+<p class="lead">Each channel gets one or more drivers. A driver's monthly volume is its factors multiplied together
+  (e.g. stores × units per product per store × probability). Product units = channel volume × product weight.
+  Overrides replace the estimate for one product, channel and month.</p>
+{% if not plan.channels %}<p class="flash warn">Add channels first.</p>{% else %}
+<section class="card">
+  <form method="post" action="/plans/{{ row.id }}/volume/add-driver" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <b>Add a driver</b>
+    <select name="channel">{% for id, name in channel_names.items() %}<option value="{{ id }}">{{ name }}</option>{% endfor %}</select>
+    <select name="preset">{% for k, l in presets %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
+    <input name="name" placeholder="Name (optional), e.g. Fit Hub">
+    <button>Add</button>
+  </form>
+  <form method="post" action="/plans/{{ row.id }}/upload/stores" enctype="multipart/form-data" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <b>Or upload a store list</b> <input type="file" name="file" accept=".xlsx,.xlsm,.csv" required>
+    <button>Upload</button> <span class="hint">one row per store: channel, store, opening month</span>
+  </form>
+</section>
+{% endif %}
+<form method="post" data-dirty>
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {% for d in plan.drivers %}
+  <section class="card">
+    <div class="stack-head">
+      <span class="tag">{{ channel_names[d.channel] }}</span>
+      <label class="inline">Driver <input name="driver-{{ d.id }}-name" value="{{ d.name }}"></label>
+      <label class="inline danger"><input type="checkbox" name="driver-{{ d.id }}-delete" value="1"> delete</label>
+    </div>
+    {{ grid(grids['factors_' ~ d.id]) }}
+    <p class="hint">“By month”: fill the month columns; months left blank at the end repeat the last value.
+      “Constant”: fill the Constant column only.</p>
+  </section>
+  {% endfor %}
+  {% if plan.drivers %}
+  <section class="card">
+    <h2>Overrides <small>optional</small></h2>
+    {{ grid(grids['overrides']) }}
+  </section>
+  {{ save('extras') }}
+  {% endif %}
+</form>
+{% if preview %}
+<section class="card">
+  <h2>Preview <small>(saved figures)</small></h2>
+  <table class="list">
+    <thead><tr><th>Year</th><th>Channel</th><th class="num">Units</th><th class="num">Retail sales incl. VAT (IDR)</th></tr></thead>
+    <tbody>
+    {% for y, chans, total in preview %}
+      {% for name, units, sales in chans %}<tr><td>{{ 'Year ' ~ y if loop.first }}</td><td>{{ name }}</td><td class="num">{{ units | units }}</td><td class="num">{{ sales | idr }}</td></tr>{% endfor %}
+      <tr class="total"><td></td><td>Total</td><td class="num">{{ total.units | units }}</td><td class="num">{{ total.sales | idr }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

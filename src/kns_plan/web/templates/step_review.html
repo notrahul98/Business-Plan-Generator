@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block main %}
+<h1>8. Review &amp; generate</h1>
+{% set errs = issues | selectattr('level', 'equalto', 'error') | list %}
+<div class="cols">
+<section class="card grow">
+  <h2>Checks</h2>
+  {% if not issues %}<p class="ok">No problems found.</p>{% endif %}
+  <ul class="issues">{% for i in issues %}<li class="{{ i.level }}"><b>{{ i.where }}</b> {{ i.message }}</li>{% endfor %}</ul>
+  {% if summary %}
+  <h2>Headline numbers <small>(IDR)</small></h2>
+  <table class="list">
+    <thead><tr><th></th>{% for y, t in summary %}<th class="num">Year {{ y }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for key, label in [('units','Units'), ('sales','Retail sales incl. VAT'), ('net_wholesale','Net wholesale (KNS revenue)'), ('cogs','Cost of goods'), ('gross_profit','Gross profit')] %}
+      <tr {% if key == 'net_wholesale' %}class="total"{% endif %}><td>{{ label }}</td>{% for y, t in summary %}<td class="num">{{ t[key] | idr }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+<section class="card side">
+  <h2>Workbook</h2>
+  <form method="post" action="/plans/{{ row.id }}/generate">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="primary" {{ 'disabled' if errs }}>Generate Excel (version {{ row.version }})</button>
+  </form>
+  {% if errs %}<p class="hint">Fix the {{ errs | length }} problem(s) first.</p>{% endif %}
+  <p class="hint">Every number in the file is a live formula. Before download the file is recalculated and checked
+    against the app's own figures.</p>
+  {% set rs = reports(row.id) %}
+  {% if rs %}
+  <ul class="files">
+  {% for r in rs %}
+    <li class="{{ 'ok' if r.ok else 'error' }}">
+      {% if r.ok %}<a href="/plans/{{ row.id }}/download/{{ r.file }}">{{ r.file }}</a>{% else %}{{ r.file }} — failed checks{% endif %}
+      <small>{{ r.checked }} values checked{% if r.backend %} with {{ r.backend }}{% endif %}{% if r.by %} · {{ r.by }}{% endif %}</small>
+      {% if r.issues %}<details><summary>{{ r.issues | length }} note(s)</summary><ul>{% for i in r.issues %}<li>{{ i }}</li>{% endfor %}</ul></details>{% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+  {% endif %}
+  <h2>Edited the workbook in Excel?</h2>
+  <form method="post" action="/plans/{{ row.id }}/reimport" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="file" name="file" accept=".xlsx" required>
+    <button>Re-import inputs</button>
+  </form>
+  <p class="hint">Only the “_Inputs” sheets are read. Changes typed on calculation sheets are not kept.</p>
+  <p><a href="/plans/{{ row.id }}/export.json">Download plan data (JSON)</a></p>
+</section>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_grid.html" import grid, save %}
+{% block main %}
+<h1>7. Extras <small>optional</small></h1>
+<form method="post" data-dirty>
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <section class="card">
+    <h2>Treatment packages</h2>
+    <p class="lead">For spa and clinic channels: one row per product a treatment uses. Rows with the same package name
+      form one package. Cost per treatment = usage ÷ product size × product price; outlet price = cost × multiplier.</p>
+    {{ grid(grids['packages']) }}
+    {% if treatment_costs %}<p>{% for name, cost in treatment_costs.items() %}<span class="kpi">{{ name }}: <b>{{ cost | idr }}</b> IDR per treatment</span>{% endfor %}</p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>Container freight</h2>
+    <p class="lead">Freight share = container cost ÷ (units × average brand price): a starting point for the freight line.</p>
+    {{ grid(grids['containers']) }}
+  </section>
+  <section class="card">
+    <h2>Market size notes</h2>
+    {{ grid(grids['market']) }}
+  </section>
+  {{ save('review') }}
+</form>
+{% endblock %}
