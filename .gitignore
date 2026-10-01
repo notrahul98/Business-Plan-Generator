@@ -4,8 +4,14 @@ __pycache__/
 .pytest_cache/
 out/
 *.xlsx
-!examples/*.xlsx
 ~$*
 data-dev/
 dev/dev_password.txt
 tests/private/
+# plan data exported from the app, or saved by hand, can hold client prices: never commit it
+*.json
+!.claude/launch.json
+*.csv
+*.xlsm
+*.pdf
+*.bundle
